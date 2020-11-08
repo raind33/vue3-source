@@ -1,5 +1,5 @@
 const arr = [2, 1, 5, 3, 6, 4, 8, 9, 7]
-
+cons result = [1, 3, 5, 6, 7]
 function getSequence(arr) {
   const p = arr.slice()
 
