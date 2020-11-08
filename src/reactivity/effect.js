@@ -15,15 +15,16 @@ let effectStack = []
 function createReactiveEffect (fn, options) {
   const effect = function reactiveEffect () {
     // 主要防止不停的更改属性导致死循环
-    try {
-      effectStack.push(effect)
-      activeEffect = effect
-      return fn()
-    } finally {
-      effectStack.pop()
-      activeEffect = effectStack[effectStack.length - 1]
-    }
     if (!effectStack.includes(effect)) {
+      try {
+        effectStack.push(effect)
+        activeEffect = effect
+        return fn()
+      } finally {
+        effectStack.pop()
+        activeEffect = effectStack[effectStack.length - 1]
+      }
+
     }
   }
   effect.options = options
