@@ -22,7 +22,7 @@ export function initState (vm) {
 function initProps () {}
 function initData (vm) {
   let data = vm.$options.data
-  data = typeof data === 'function' ? data.call(vm) : data
+  data = vm._data = typeof data === 'function' ? data.call(vm) : data
   observe(data)
 }
 function initMethods () {}
