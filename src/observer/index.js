@@ -1,11 +1,8 @@
 import { newArrayProto } from './array'
+import { defineProperty } from '../util'
 class Observer {
   constructor (data) {
-    Object.defineProperty(data, '__ob__', {
-      enumerable: false,
-      configurable: false,
-      value: this
-    })
+    defineProperty(data, '__ob__', this)
     if (Array.isArray(data)) {
       data.__proto__ = newArrayProto
       this.observedArray(data)

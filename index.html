@@ -6,7 +6,10 @@
   <title>Document</title>
 </head>
 <body>
-  
+  <div id="app" mode=2>
+    23222222222222
+    <p class="log" model="3">232<span id="we">23</span></p>
+  </div>
 </body>
 <script src="/dist/umd/vue.js"></script>
 <script>
@@ -16,6 +19,6 @@
       return { a: [1, {a:1}] }
     }
   })
-  vm._data.a.push({c:3}, [1,2])
+  console.log(vm.a)
 </script>
 </html>
