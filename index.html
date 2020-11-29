@@ -1,24 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
-  <div id="app" mode=2>
-    23222222222222
-    <p class="log" model="3">232<span id="we">23</span></p>
-  </div>
-</body>
-<script src="/dist/umd/vue.js"></script>
-<script>
-  const vm = new Vue({
-    el: '#app',
-    data () {
-      return { a: [1, {a:1}] }
-    }
-  })
-  console.log(vm.a)
-</script>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app" style="color: red;font-size:18px">hello {{ name}} wew {{age}} <span>232</span></div>
+  </body>
+  <script src="/dist/umd/vue.js"></script>
+  <script>
+    const vm = new Vue({
+      el: '#app',
+      data() {
+        return { a: [1, { a: 1 }] }
+      },
+    })
+  </script>
 </html>

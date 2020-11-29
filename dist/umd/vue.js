@@ -4,12 +4,89 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 }(this, (function () { 'use strict';
 
+  const defaultTagRe = /\{\{((?:.|\r?\n)+?)\}\}/g;
+  function generate(ast) {
+    // <div id="app" style="color:red"> hello {{name}} <span>232</span></div>
+    // render () {
+    //   return _c('div', {id:'app',style:{color:'red'}},_v('hello'+_s(name)),_c('span',null,
+    //     _v('232')
+    //   ))
+    // }
+    let children = genChildren(ast.children);
+    let code = `_c('${ast.tag}',${ast.attrs.length ? genProps(ast.attrs) : 'undefined'}${children ? `,${children}` : ''})`;
+    return code;
+  }
+
+  function genProps(attrs) {
+    let str = '';
+
+    for (let i = 0; i < attrs.length; i++) {
+      const attr = attrs[i];
+
+      if (attr.name === 'style') {
+        let obj = {};
+        attr.value.split(';').forEach(item => {
+          const [key, value] = item.split(':');
+          obj[key] = value;
+        });
+        attr.value = obj;
+      }
+
+      str += `${attr.name}:${JSON.stringify(attr.value)},`;
+    }
+
+    return `{${str.slice(0, -1)}}`;
+  }
+
+  function genChildren(children) {
+    if (children) {
+      return children = children.map(child => gen(child)).join(',');
+    }
+  }
+
+  function gen(child) {
+    if (child.type === 1) {
+      return generate(child);
+    } else {
+      let text = child.text;
+
+      if (!defaultTagRe.test(text)) {
+        return `_v(${JSON.stringify(text)})`;
+      }
+
+      let tokens = [];
+      let lastIndex = defaultTagRe.lastIndex = 0;
+      let match, index; //hello {{name}} wew {{age}}
+
+      while (match = defaultTagRe.exec(text)) {
+        index = match.index;
+
+        if (index > lastIndex) {
+          tokens.push(JSON.stringify(text.slice(lastIndex, index)));
+        }
+
+        tokens.push(`_s(${match[1].trim()})`);
+        lastIndex = index + match[0].length;
+      }
+
+      if (lastIndex < text.length) {
+        tokens.push(JSON.stringify(text.slice(lastIndex)));
+      }
+
+      return `_v(${tokens.join('+')})`;
+    }
+  }
+
   const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
   const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z]*`;
   const qnameCapture = `((?:${ncname}\\:)?${ncname})`;
   const startTagOpen = new RegExp(`^<${qnameCapture}`);
   const startTagClose = /^\s*(\/?)>/;
   const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`);
+  //   23222222222222
+  //   <p class="log" model="3">232<span id="we">23</span></p>
+  // </div>
+
   function htmlParser(html) {
     let root;
     let currentParent;
@@ -24,7 +101,9 @@
         if (startTagMatch) {
           start(startTagMatch.tagName, startTagMatch.attrs);
           continue;
-        }
+        } // </span></p>
+        //  </div>
+
 
         const endTagMatch = html.match(endTag);
 
@@ -40,6 +119,9 @@
       let text;
 
       if (textEnd > 0) {
+        //   23222222222222
+        //   <p class="log" model="3">232<span id="we">23</span></p>
+        // </div>
         text = html.substring(0, textEnd);
       }
 
@@ -50,7 +132,7 @@
     }
 
     console.log(root, 9999999999);
-    debugger;
+    return root;
 
     function advance(n) {
       html = html.substring(n);
@@ -132,6 +214,10 @@
 
   function compileToFunction(template) {
     const ast = htmlParser(template);
+    const code = generate(ast);
+    const render = new Function(`with(this){return ${code}}`);
+    console.log(render);
+    return render;
   }
 
   const oldArrayMethods = Array.prototype;
