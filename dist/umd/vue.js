@@ -4,9 +4,54 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 }(this, (function () { 'use strict';
 
+  const oldArrayMethods = Array.prototype;
+  const newArrayProto = Object.create(oldArrayMethods);
+  let methods = ['push', 'pop', 'shift', 'unshift', 'splice', 'reverse', 'sort'];
+  methods.forEach(method => {
+    newArrayProto[method] = function (...args) {
+      const result = oldArrayMethods[method].apply(this, args);
+      let insert;
+
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          insert = args;
+          break;
+
+        case 'splice':
+          insert = args.slice(2);
+          break;
+      }
+
+      if (insert) {
+        this.__ob__.observedArray(insert);
+      }
+
+      return result;
+    };
+  });
+
   class Observer {
     constructor(data) {
+      Object.defineProperty(data, '__ob__', {
+        enumerable: false,
+        configurable: false,
+        value: this
+      });
+
+      if (Array.isArray(data)) {
+        data.__proto__ = newArrayProto;
+        this.observedArray(data);
+        return;
+      }
+
       this.walk(data);
+    }
+
+    observedArray(arr) {
+      arr.forEach(item => {
+        observe(item);
+      });
     }
 
     walk(data) {
@@ -37,9 +82,10 @@
 
   function observe(data) {
     if (typeof data !== 'object' || typeof data === null) {
-      return;
+      return data;
     }
 
+    if (data.__ob__) return data;
     return new Observer(data);
   }
 

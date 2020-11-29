@@ -1,6 +1,22 @@
+import { newArrayProto } from './array'
 class Observer {
   constructor (data) {
+    Object.defineProperty(data, '__ob__', {
+      enumerable: false,
+      configurable: false,
+      value: this
+    })
+    if (Array.isArray(data)) {
+      data.__proto__ = newArrayProto
+      this.observedArray(data)
+      return
+    }
     this.walk(data)
+  }
+  observedArray (arr) {
+    arr.forEach(item => {
+      observe(item)
+    })
   }
   walk (data) {
     Object.keys(data).forEach(key => {
@@ -26,8 +42,9 @@ function defineReactive (data, key, val) {
 }
 export function observe (data) {
   if (typeof data !== 'object' || typeof data === null) {
-    return
+    return data
   }
+
+  if (data.__ob__) return data
   return new Observer(data)
-  console.log(data)
 }
