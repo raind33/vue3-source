@@ -220,6 +220,63 @@
     return render;
   }
 
+  function patch(oldVnode, vnode) {
+    console.log(vnode);
+    let el = createEle(vnode);
+    let parentEl = oldVnode.parentNode;
+    parentEl.insertBefore(el, oldVnode.nextSibling);
+    parentEl.removeChild(oldVnode);
+  }
+
+  function createEle(vnode) {
+    let {
+      tag,
+      data,
+      children,
+      key,
+      text
+    } = vnode;
+
+    if (typeof tag === 'string') {
+      vnode.el = document.createElement(tag);
+      patchProps(vnode);
+      children.forEach(child => {
+        vnode.el.appendChild(createEle(child));
+      });
+    } else {
+      vnode.el = document.createTextNode(text);
+    }
+
+    return vnode.el;
+  }
+
+  function patchProps(vnode) {
+    const newProps = vnode.data || {};
+    const el = vnode.el;
+
+    for (let key in newProps) {
+      if (key === 'style') {
+        for (let s in newProps[key]) {
+          el.style[s] = newProps[key][s];
+        }
+      } else if (key === 'class') {
+        el.className = newProps[key];
+      } else {
+        el.setAttribute(key, newProps[key]);
+      }
+    }
+  }
+
+  function lifecycleMixin(Vue) {
+    Vue.prototype._update = function (vnode) {
+      const vm = this;
+      patch(vm.$el, vnode);
+    };
+  }
+  function mountComponent(vm, el) {
+    vm._update(vm._render());
+  }
+
   const oldArrayMethods = Array.prototype;
   const newArrayProto = Object.create(oldArrayMethods);
   let methods = ['push', 'pop', 'shift', 'unshift', 'splice', 'reverse', 'sort'];
@@ -363,6 +420,7 @@
       const vm = this;
       const opts = vm.$options;
       el = document.querySelector(el);
+      vm.$el = el;
 
       if (!opts.render) {
         let template = opts.template;
@@ -373,6 +431,47 @@
 
         opts.render = compileToFunction(template);
       }
+
+      mountComponent(vm);
+    };
+  }
+
+  function renderMixin(Vue) {
+    Vue.prototype._c = function () {
+      return createElement(...arguments);
+    };
+
+    Vue.prototype._s = function (val) {
+      return val === null ? '' : typeof val === 'object' ? JSON.stringify(val) : val;
+    };
+
+    Vue.prototype._v = function (text) {
+      return createTextVnode(text);
+    };
+
+    Vue.prototype._render = function () {
+      const vm = this;
+      const render = vm.$options.render;
+      const vnode = render.call(vm);
+      return vnode;
+    };
+  }
+
+  function createElement(tag, data = {}, ...children) {
+    return vnode(tag, data, data.key, children);
+  }
+
+  function createTextVnode(text) {
+    return vnode(undefined, undefined, undefined, undefined, text);
+  }
+
+  function vnode(tag, data, key, children, text) {
+    return {
+      tag,
+      data,
+      key,
+      children,
+      text
     };
   }
 
@@ -381,6 +480,8 @@
   }
 
   initMixin(Vue);
+  renderMixin(Vue);
+  lifecycleMixin(Vue);
 
   return Vue;
 
