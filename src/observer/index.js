@@ -1,5 +1,6 @@
 import { newArrayProto } from './array'
 import { defineProperty } from '../util'
+import Dep from './dep'
 class Observer {
   constructor (data) {
     defineProperty(data, '__ob__', this)
@@ -24,9 +25,15 @@ class Observer {
 }
 function defineReactive (data, key, val) {
   observe(val)
+
+  const dep = new Dep() // 每次都会给属性创建一个dep
+
   Object.defineProperty(data, key, {
     get () {
       console.log('获取值')
+      if (Dep.target) {
+        dep.depend() // 让这个属性自己的dep记住这个watcher
+      }
       return val
     },
     set (newVal) {
@@ -34,6 +41,7 @@ function defineReactive (data, key, val) {
       if (val === newVal) return
       observe(newVal)
       val = newVal
+      dep.notify()
     }
   })
 }

@@ -1,10 +1,16 @@
 export function patch (oldVnode, vnode) {
   console.log(vnode)
 
-  let el = createEle(vnode)
-  let parentEl = oldVnode.parentNode
-  parentEl.insertBefore(el, oldVnode.nextSibling)
-  parentEl.removeChild(oldVnode)
+  const isRealEl = oldVnode.nodeType
+  if (isRealEl) {
+    let el = createEle(vnode)
+    let parentEl = oldVnode.parentNode
+    parentEl.insertBefore(el, oldVnode.nextSibling)
+    parentEl.removeChild(oldVnode)
+    return el
+  } else {
+
+  }
 }
 
 function createEle (vnode) {

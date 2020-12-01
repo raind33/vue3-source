@@ -222,10 +222,15 @@
 
   function patch(oldVnode, vnode) {
     console.log(vnode);
-    let el = createEle(vnode);
-    let parentEl = oldVnode.parentNode;
-    parentEl.insertBefore(el, oldVnode.nextSibling);
-    parentEl.removeChild(oldVnode);
+    const isRealEl = oldVnode.nodeType;
+
+    if (isRealEl) {
+      let el = createEle(vnode);
+      let parentEl = oldVnode.parentNode;
+      parentEl.insertBefore(el, oldVnode.nextSibling);
+      parentEl.removeChild(oldVnode);
+      return el;
+    }
   }
 
   function createEle(vnode) {
@@ -267,14 +272,86 @@
     }
   }
 
+  let id = 0;
+
+  class Dep {
+    constructor() {
+      this.id = id++;
+      this.subs = []; // 需要记住的watcher
+    }
+
+    depend() {
+      Dep.target.addDep(this);
+    }
+
+    addSub(watcher) {
+      this.subs.push(watcher);
+    }
+
+    notify() {
+      this.subs.forEach(watcher => {
+        watcher.update();
+      });
+    }
+
+  }
+
+  Dep.target = null;
+  function pushTarget(watcher) {
+    Dep.target = watcher;
+  }
+  function popTarget() {
+    Dep.target = null;
+  }
+
+  let id$1 = 0;
+  class Watcher {
+    constructor(vm, exprOrFn, cb, renderWatcher) {
+      this.vm = vm;
+      this.cb = cb;
+      this.getter = exprOrFn;
+      this.options = vm.options;
+      this.id = id$1++;
+      this.deps = [];
+      this.depsId = new Set();
+      this.get();
+    } // 当属性取值时，需要记住这个watcher。数据再次变化，就去执行自己记住的这个watcher
+
+
+    get() {
+      // 这个方法会对属性进行取值
+      pushTarget(this);
+      this.getter();
+      popTarget();
+    }
+
+    addDep(dep) {
+      if (!this.depsId.has(dep.id)) {
+        this.depsId.add(dep.id);
+        this.deps.push(dep);
+        dep.addSub(this);
+      }
+    }
+
+    update() {
+      this.get();
+    }
+
+  }
+
   function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
       const vm = this;
-      patch(vm.$el, vnode);
+      vm.$el = patch(vm.$el, vnode);
     };
   }
   function mountComponent(vm, el) {
-    vm._update(vm._render());
+    const updateComponent = () => {
+      vm._update(vm._render());
+    }; // true代表是渲染watcher
+
+
+    new Watcher(vm, updateComponent, () => {}, true);
   }
 
   const oldArrayMethods = Array.prototype;
@@ -353,9 +430,16 @@
 
   function defineReactive(data, key, val) {
     observe(val);
+    const dep = new Dep(); // 每次都会给属性创建一个dep
+
     Object.defineProperty(data, key, {
       get() {
         console.log('获取值');
+
+        if (Dep.target) {
+          dep.depend(); // 让这个属性自己的dep记住这个watcher
+        }
+
         return val;
       },
 
@@ -364,6 +448,7 @@
         if (val === newVal) return;
         observe(newVal);
         val = newVal;
+        dep.notify();
       }
 
     });

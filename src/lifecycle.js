@@ -1,11 +1,19 @@
 import { patch } from "./vdom/patch"
+import Watcher from "./observer/watcher"
 
 export function lifecycleMixin (Vue) {
   Vue.prototype._update = function (vnode) {
     const vm = this
-    patch(vm.$el, vnode)
+    vm.$el = patch(vm.$el, vnode)
   }
 }
 export function mountComponent (vm, el) {
-  vm._update(vm._render())
+
+  const updateComponent = () => {
+
+    vm._update(vm._render())
+  }
+
+  // true代表是渲染watcher
+  new Watcher(vm, updateComponent, () => {}, true)
 }
