@@ -16,3 +16,19 @@ export function defineProperty (target, key, value) {
     value
   })
 }
+
+let callbacks = []
+let waiting = false
+function flushCallback () {
+  for(let i = 0; i < callbacks.length; i++) {
+    callbacks[i]()
+  }
+  waiting = false
+}
+export function nextTick(cb) {
+  callbacks.push(cb)
+  if (!waiting) {
+    waiting = true
+    Promise.resolve().then(flushCallback)
+  }
+}

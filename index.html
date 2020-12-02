@@ -22,6 +22,10 @@
 
     setTimeout(() => {
       vm.age = 20
+      vm.age = 60
+      vm.$nextTick(() => {
+        console.log(vm.$el.innerHTML)
+      })
     }, 2000)
   </script>
 </html>

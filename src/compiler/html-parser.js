@@ -47,7 +47,7 @@ export function htmlParser(html) {
       chars(text)
     }
   }
-  console.log(root, 9999999999)
+  // console.log(root, 9999999999)
   return root
   function advance(n) {
     html = html.substring(n)
@@ -76,7 +76,6 @@ export function htmlParser(html) {
       }
       if (end) {
         advance(end[0].length)
-        console.log(html)
         return match
       }
     }
@@ -107,7 +106,6 @@ export function htmlParser(html) {
       type: 3,
       text,
     })
-    console.log(text, 'text')
   }
   function end(tagName) {
     // 在结尾标签处创建父子关系
@@ -118,6 +116,5 @@ export function htmlParser(html) {
       currentParent.children.push(element)
       element.parent = currentParent
     }
-    console.log(tagName, '------结束标签------')
   }
 }

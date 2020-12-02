@@ -129,9 +129,9 @@
         advance(text.length);
         chars(text);
       }
-    }
+    } // console.log(root, 9999999999)
 
-    console.log(root, 9999999999);
+
     return root;
 
     function advance(n) {
@@ -160,7 +160,6 @@
 
         if (end) {
           advance(end[0].length);
-          console.log(html);
           return match;
         }
       }
@@ -194,7 +193,6 @@
         type: 3,
         text
       });
-      console.log(text, 'text');
     }
 
     function end(tagName) {
@@ -207,8 +205,6 @@
         currentParent.children.push(element);
         element.parent = currentParent;
       }
-
-      console.log(tagName, '------结束标签------');
     }
   }
 
@@ -216,12 +212,10 @@
     const ast = htmlParser(template);
     const code = generate(ast);
     const render = new Function(`with(this){return ${code}}`);
-    console.log(render);
     return render;
   }
 
   function patch(oldVnode, vnode) {
-    console.log(vnode);
     const isRealEl = oldVnode.nodeType;
 
     if (isRealEl) {
@@ -286,6 +280,7 @@
 
     addSub(watcher) {
       this.subs.push(watcher);
+      console.log(this.subs);
     }
 
     notify() {
@@ -302,6 +297,75 @@
   }
   function popTarget() {
     Dep.target = null;
+  }
+
+  function proxy(vm, data, key) {
+    Object.defineProperty(vm, key, {
+      get() {
+        return vm[data][key];
+      },
+
+      set(val) {
+        vm[data][key] = val;
+      }
+
+    });
+  }
+  function defineProperty(target, key, value) {
+    Object.defineProperty(target, key, {
+      enumerable: false,
+      configurable: false,
+      value
+    });
+  }
+  let callbacks = [];
+  let waiting = false;
+
+  function flushCallback() {
+    for (let i = 0; i < callbacks.length; i++) {
+      callbacks[i]();
+    }
+
+    waiting = false;
+  }
+
+  function nextTick(cb) {
+    callbacks.push(cb);
+
+    if (!waiting) {
+      waiting = true;
+      Promise.resolve().then(flushCallback);
+    }
+  }
+
+  let queue = [];
+  let has = {};
+  let pending = false;
+
+  function flushSchedular() {
+    for (let i = 0; i < queue.length; i++) {
+      const watcher = queue[i];
+      watcher.run();
+    }
+
+    queue = [];
+    has = {};
+    pending = false;
+  } // 多次调用queueWatcher， 如果watcher不是同一个也会重复调用nextTick
+
+
+  function queueWatcher(watcher) {
+    const id = watcher.id;
+
+    if (has[id] == null) {
+      queue.push(watcher);
+      has[id] = true;
+
+      if (!pending) {
+        pending = true;
+        nextTick(flushSchedular);
+      }
+    }
   }
 
   let id$1 = 0;
@@ -333,8 +397,12 @@
       }
     }
 
-    update() {
+    run() {
       this.get();
+    }
+
+    update() {
+      queueWatcher(this); // this.get()
     }
 
   }
@@ -343,6 +411,7 @@
     Vue.prototype._update = function (vnode) {
       const vm = this;
       vm.$el = patch(vm.$el, vnode);
+      console.log(vm.$el);
     };
   }
   function mountComponent(vm, el) {
@@ -381,26 +450,6 @@
     };
   });
 
-  function proxy(vm, data, key) {
-    Object.defineProperty(vm, key, {
-      get() {
-        return vm[data][key];
-      },
-
-      set(val) {
-        vm[data][key] = val;
-      }
-
-    });
-  }
-  function defineProperty(target, key, value) {
-    Object.defineProperty(target, key, {
-      enumerable: false,
-      configurable: false,
-      value
-    });
-  }
-
   class Observer {
     constructor(data) {
       defineProperty(data, '__ob__', this);
@@ -434,8 +483,7 @@
 
     Object.defineProperty(data, key, {
       get() {
-        console.log('获取值');
-
+        // console.log('获取值')
         if (Dep.target) {
           dep.depend(); // 让这个属性自己的dep记住这个watcher
         }
@@ -444,7 +492,7 @@
       },
 
       set(newVal) {
-        console.log('设置值');
+        // console.log('设置值')
         if (val === newVal) return;
         observe(newVal);
         val = newVal;
@@ -500,6 +548,8 @@
         vm.$mount(vm.$options.el);
       }
     };
+
+    Vue.prototype.$nextTick = nextTick;
 
     Vue.prototype.$mount = function (el) {
       const vm = this;

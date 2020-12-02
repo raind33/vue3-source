@@ -30,14 +30,14 @@ function defineReactive (data, key, val) {
 
   Object.defineProperty(data, key, {
     get () {
-      console.log('获取值')
+      // console.log('获取值')
       if (Dep.target) {
         dep.depend() // 让这个属性自己的dep记住这个watcher
       }
       return val
     },
     set (newVal) {
-      console.log('设置值')
+      // console.log('设置值')
       if (val === newVal) return
       observe(newVal)
       val = newVal

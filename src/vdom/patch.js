@@ -1,5 +1,4 @@
 export function patch (oldVnode, vnode) {
-  console.log(vnode)
 
   const isRealEl = oldVnode.nodeType
   if (isRealEl) {

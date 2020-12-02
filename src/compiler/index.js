@@ -6,6 +6,5 @@ export function compileToFunction (template) {
   const code = generate(ast)
 
   const render = new Function(`with(this){return ${code}}`)
-  console.log(render)
   return render
 }
