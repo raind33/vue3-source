@@ -4,6 +4,111 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 }(this, (function () { 'use strict';
 
+  function proxy(vm, data, key) {
+    Object.defineProperty(vm, key, {
+      get() {
+        return vm[data][key];
+      },
+
+      set(val) {
+        vm[data][key] = val;
+      }
+
+    });
+  }
+  function defineProperty(target, key, value) {
+    Object.defineProperty(target, key, {
+      enumerable: false,
+      configurable: false,
+      value
+    });
+  }
+  let callbacks = [];
+  let waiting = false;
+
+  function flushCallback() {
+    for (let i = 0; i < callbacks.length; i++) {
+      callbacks[i]();
+    }
+
+    waiting = false;
+  } // 1.第一次cb渲染watcher更新操作调用nextTick,页面初渲染
+  // 2. 第二次是用户主动调用nextTick的cb
+  // 3.所以当在页面中使用nextTick,页面渲染与nextTick的回调都是在宏任务结束后同步执行，渲染先
+
+
+  function nextTick(cb) {
+    callbacks.push(cb);
+
+    if (!waiting) {
+      waiting = true;
+      Promise.resolve().then(flushCallback); // 多次调用nextTick，只执行一次
+    }
+  }
+  const hooks = ['beforeCreate', 'created', 'beforeMount', 'mounted'];
+  const strat = {};
+  hooks.forEach(hook => {
+    strat[hook] = mergeHook;
+  });
+
+  function mergeHook(parent, child) {
+    if (child) {
+      if (parent) {
+        return parent.concat(child);
+      } else {
+        return [child];
+      }
+    } else {
+      return parent;
+    }
+  }
+
+  function mergeOptions(parent, child) {
+    let options = {};
+
+    for (let key in parent) {
+      mergeField(key);
+    }
+
+    for (let key in child) {
+      if (!parent.hasOwnProperty(key)) {
+        mergeField(key);
+      }
+    }
+
+    return options;
+
+    function mergeField(key) {
+      if (strat[key]) {
+        options[key] = mergeHook(parent[key], child[key]);
+        return;
+      }
+
+      if (isObj(parent[key]) && isObj(child[key])) {
+        options[key] = Object.assign(parent[key], child[key]);
+      } else {
+        if (child[key]) {
+          options[key] = child[key];
+        } else if (parent[key]) {
+          options[key] = parent[key];
+        }
+      }
+    }
+  }
+
+  function isObj(val) {
+    return typeof val === 'object' && typeof val !== 'null';
+  }
+
+  function initGlobalApi(Vue) {
+    Vue.options = {};
+
+    Vue.mixin = function (options) {
+      this.options = mergeOptions(this.options, options);
+      console.log(this.options);
+    };
+  }
+
   const defaultTagRe = /\{\{((?:.|\r?\n)+?)\}\}/g;
   function generate(ast) {
     // <div id="app" style="color:red"> hello {{name}} <span>232</span></div>
@@ -299,48 +404,6 @@
     Dep.target = null;
   }
 
-  function proxy(vm, data, key) {
-    Object.defineProperty(vm, key, {
-      get() {
-        return vm[data][key];
-      },
-
-      set(val) {
-        vm[data][key] = val;
-      }
-
-    });
-  }
-  function defineProperty(target, key, value) {
-    Object.defineProperty(target, key, {
-      enumerable: false,
-      configurable: false,
-      value
-    });
-  }
-  let callbacks = [];
-  let waiting = false;
-
-  function flushCallback() {
-    for (let i = 0; i < callbacks.length; i++) {
-      callbacks[i]();
-    }
-
-    waiting = false;
-  } // 1.第一次cb渲染watcher更新操作调用nextTick,页面初渲染
-  // 2. 第二次是用户主动调用nextTick的cb
-  // 3.所以当在页面中使用nextTick,页面渲染与nextTick的回调都是在宏任务结束后同步执行，渲染先
-
-
-  function nextTick(cb) {
-    callbacks.push(cb);
-
-    if (!waiting) {
-      waiting = true;
-      Promise.resolve().then(flushCallback); // 多次调用nextTick，只执行一次
-    }
-  }
-
   let queue = [];
   let has = {};
   let pending = false;
@@ -416,6 +479,10 @@
       vm.$el = patch(vm.$el, vnode);
       console.log(vm.$el);
     };
+  }
+  function callHook(vm, key) {
+    const handlers = vm.$options[key];
+    handlers.forEach(handle => handle.call(vm));
   }
   function mountComponent(vm, el) {
     const updateComponent = () => {
@@ -568,8 +635,10 @@
   function initMixin(Vue) {
     Vue.prototype._init = function (opts) {
       const vm = this;
-      vm.$options = opts;
+      vm.$options = mergeOptions(vm.constructor.options, opts);
+      callHook(vm, 'beforeCreate');
       initState(vm);
+      callHook(vm, 'created');
 
       if (vm.$options.el) {
         vm.$mount(vm.$options.el);
@@ -644,6 +713,7 @@
   initMixin(Vue);
   renderMixin(Vue);
   lifecycleMixin(Vue);
+  initGlobalApi(Vue);
 
   return Vue;
 

@@ -8,6 +8,10 @@ export function lifecycleMixin (Vue) {
     console.log(vm.$el)
   }
 }
+export function callHook (vm, key) {
+  const handlers = vm.$options[key]
+  handlers.forEach(handle => handle.call(vm))
+}
 export function mountComponent (vm, el) {
 
   const updateComponent = () => {

@@ -36,3 +36,59 @@ export function nextTick(cb) {
     Promise.resolve().then(flushCallback) // 多次调用nextTick，只执行一次
   }
 }
+
+const hooks = [
+  'beforeCreate',
+  'created',
+  'beforeMount',
+  'mounted'
+]
+const strat = {}
+hooks.forEach(hook => {
+  strat[hook] = mergeHook
+})
+function mergeHook (parent, child) {
+  if (child) {
+    if (parent) {
+      return parent.concat(child)
+    } else {
+      return [child]
+    }
+  } else {
+    return parent
+  }
+}
+export function mergeOptions (parent, child) {
+  let options = {}
+
+  for (let key in parent) {
+    mergeField(key)
+  }
+  for (let key in child) {
+    if (!parent.hasOwnProperty(key)) {
+      mergeField(key)
+    }
+  }
+  return options
+  function mergeField (key) {
+    if (strat[key]) {
+      options[key] = mergeHook(parent[key], child[key])
+      return
+    }
+    if (isObj(parent[key]) && isObj(child[key])) {
+      options[key] = Object.assign(parent[key], child[key])
+    } else {
+      if (child[key]) {
+        options[key] = child[key]
+      } else if (parent[key]) {
+        options[key] = parent[key]
+      }
+    }
+
+  }
+
+}
+
+function isObj (val) {
+  return typeof val === 'object' && typeof val !== 'null'
+}
