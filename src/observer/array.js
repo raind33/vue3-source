@@ -30,6 +30,7 @@ methods.forEach(method => {
     if (insert) {
       this.__ob__.observedArray(insert)
     }
+    this.__ob__.dep.notify()
     return result
   }
 })

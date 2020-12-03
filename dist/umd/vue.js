@@ -327,14 +327,17 @@
     }
 
     waiting = false;
-  }
+  } // 1.第一次cb渲染watcher更新操作调用nextTick,页面初渲染
+  // 2. 第二次是用户主动调用nextTick的cb
+  // 3.所以当在页面中使用nextTick,页面渲染与nextTick的回调都是在宏任务结束后同步执行，渲染先
+
 
   function nextTick(cb) {
     callbacks.push(cb);
 
     if (!waiting) {
       waiting = true;
-      Promise.resolve().then(flushCallback);
+      Promise.resolve().then(flushCallback); // 多次调用nextTick，只执行一次
     }
   }
 
@@ -446,12 +449,16 @@
         this.__ob__.observedArray(insert);
       }
 
+      this.__ob__.dep.notify();
+
       return result;
     };
   });
 
   class Observer {
     constructor(data) {
+      this.dep = new Dep(); // 给数组和对象本身增加一个dep属性
+
       defineProperty(data, '__ob__', this);
 
       if (Array.isArray(data)) {
@@ -475,10 +482,22 @@
       });
     }
 
+  } // 让里层数组收集外层数组的依赖，这样修改里层数组也可以更新视图
+
+
+  function dependArray(val) {
+    for (let i = 0; i < val.length; i++) {
+      const current = val[i];
+      current.__ob__ && current.__ob__.dep.depend();
+
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
   }
 
   function defineReactive(data, key, val) {
-    observe(val);
+    const childOb = observe(val);
     const dep = new Dep(); // 每次都会给属性创建一个dep
 
     Object.defineProperty(data, key, {
@@ -486,6 +505,14 @@
         // console.log('获取值')
         if (Dep.target) {
           dep.depend(); // 让这个属性自己的dep记住这个watcher
+
+          if (childOb) {
+            childOb.dep.depend();
+
+            if (Array.isArray(val)) {
+              dependArray(val);
+            }
+          }
         }
 
         return val;
@@ -504,7 +531,7 @@
 
   function observe(data) {
     if (typeof data !== 'object' || typeof data === null) {
-      return data;
+      return;
     }
 
     if (data.__ob__) return data;
