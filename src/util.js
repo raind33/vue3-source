@@ -44,6 +44,17 @@ const hooks = [
   'mounted'
 ]
 const strat = {}
+strat.components = mergeComponents
+function mergeComponents (parent, child) {
+  const res = Object.create(parent)
+  if (child) {
+
+    for(let key in child) {
+      res[key] = child[key]
+    }
+  }
+  return res
+}
 hooks.forEach(hook => {
   strat[hook] = mergeHook
 })
@@ -72,7 +83,7 @@ export function mergeOptions (parent, child) {
   return options
   function mergeField (key) {
     if (strat[key]) {
-      options[key] = mergeHook(parent[key], child[key])
+      options[key] = strat[key](parent[key], child[key])
       return
     }
     if (isObj(parent[key]) && isObj(child[key])) {
@@ -89,6 +100,16 @@ export function mergeOptions (parent, child) {
 
 }
 
-function isObj (val) {
+export function isObj (val) {
   return typeof val === 'object' && typeof val !== 'null'
 }
+
+
+function makeup (str) {
+  const map = {}
+  str.split(',').forEach(tag => {
+    map[tag] = true
+  })
+  return (val) => map[val] || false
+}
+export const isReservedTag = makeup('a,p,ul,li,ol,div,span,input,button')

@@ -47,6 +47,20 @@
   }
   const hooks = ['beforeCreate', 'created', 'beforeMount', 'mounted'];
   const strat = {};
+  strat.components = mergeComponents;
+
+  function mergeComponents(parent, child) {
+    const res = Object.create(parent);
+
+    if (child) {
+      for (let key in child) {
+        res[key] = child[key];
+      }
+    }
+
+    return res;
+  }
+
   hooks.forEach(hook => {
     strat[hook] = mergeHook;
   });
@@ -80,7 +94,7 @@
 
     function mergeField(key) {
       if (strat[key]) {
-        options[key] = mergeHook(parent[key], child[key]);
+        options[key] = strat[key](parent[key], child[key]);
         return;
       }
 
@@ -95,10 +109,19 @@
       }
     }
   }
-
   function isObj(val) {
     return typeof val === 'object' && typeof val !== 'null';
   }
+
+  function makeup(str) {
+    const map = {};
+    str.split(',').forEach(tag => {
+      map[tag] = true;
+    });
+    return val => map[val] || false;
+  }
+
+  const isReservedTag = makeup('a,p,ul,li,ol,div,span,input,button');
 
   function initGlobalApi(Vue) {
     Vue.options = {};
@@ -106,6 +129,32 @@
     Vue.mixin = function (options) {
       this.options = mergeOptions(this.options, options);
       console.log(this.options);
+    };
+
+    Vue.options.components = {};
+    Vue.options._base = Vue;
+
+    Vue.component = function (id, definition) {
+      definition.name = id || definition.name;
+      definition = this.options._base.extend(definition);
+      this.options.components[id] = definition;
+    };
+
+    let cid = 0;
+
+    Vue.extend = function (options) {
+      const Super = this;
+
+      const Sub = function VueComponent(options) {
+        this._init(options);
+      };
+
+      Sub.cid = cid++;
+      Sub.prototype = Object.create(Super.prototype);
+      Sub.prototype.constructor = Sub;
+      Sub.component = Super.component;
+      Sub.options = mergeOptions(Super.options, options);
+      return Sub;
     };
   }
 
@@ -321,6 +370,10 @@
   }
 
   function patch(oldVnode, vnode) {
+    if (!oldVnode) {
+      return createEle(vnode);
+    }
+
     const isRealEl = oldVnode.nodeType;
 
     if (isRealEl) {
@@ -342,6 +395,10 @@
     } = vnode;
 
     if (typeof tag === 'string') {
+      if (createComponent(vnode)) {
+        return vnode.componentInstance.$el;
+      }
+
       vnode.el = document.createElement(tag);
       patchProps(vnode);
       children.forEach(child => {
@@ -352,6 +409,23 @@
     }
 
     return vnode.el;
+  }
+
+  function createComponent(vnode) {
+    const {
+      data
+    } = vnode;
+    let i;
+
+    if ((i = data.hook) && (i = i.init)) {
+      i(vnode); // 调用组件的初始化方法
+
+      if (vnode.componentInstance) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   function patchProps(vnode) {
@@ -482,9 +556,9 @@
   }
   function callHook(vm, key) {
     const handlers = vm.$options[key];
-    handlers.forEach(handle => handle.call(vm));
+    handlers && handlers.forEach(handle => handle.call(vm));
   }
-  function mountComponent(vm, el) {
+  function mountComponent(vm) {
     const updateComponent = () => {
       vm._update(vm._render());
     }; // true代表是渲染watcher
@@ -636,6 +710,7 @@
     Vue.prototype._init = function (opts) {
       const vm = this;
       vm.$options = mergeOptions(vm.constructor.options, opts);
+      console.log(vm.$options);
       callHook(vm, 'beforeCreate');
       initState(vm);
       callHook(vm, 'created');
@@ -669,7 +744,8 @@
 
   function renderMixin(Vue) {
     Vue.prototype._c = function () {
-      return createElement(...arguments);
+      const vm = this;
+      return createElement(vm, ...arguments);
     };
 
     Vue.prototype._s = function (val) {
@@ -677,7 +753,8 @@
     };
 
     Vue.prototype._v = function (text) {
-      return createTextVnode(text);
+      const vm = this;
+      return createTextVnode(vm, text);
     };
 
     Vue.prototype._render = function () {
@@ -688,21 +765,47 @@
     };
   }
 
-  function createElement(tag, data = {}, ...children) {
-    return vnode(tag, data, data.key, children);
+  function createElement(vm, tag, data = {}, ...children) {
+    if (!isReservedTag(tag)) {
+      const Ctor = vm.$options.components[tag];
+      return createComponent$1(vm, tag, data, data.key, children, Ctor);
+    }
+
+    return vnode(vm, tag, data, data.key, children);
+  } // 创建组件vnode
+
+
+  function createComponent$1(vm, tag, data, key, children, Ctor) {
+    if (isObj(Ctor)) {
+      Ctor = vm.$options._base.extend(Ctor);
+    } // 给组件增加生命周期
+
+
+    data.hook = {
+      init(vnode) {
+        const child = vnode.componentInstance = new vnode.componentOptions.Ctor({});
+        child.$mount();
+      }
+
+    };
+    return vnode(vm, `vue-component-${Ctor.cid}-${tag}`, data, key, undefined, undefined, {
+      Ctor
+    });
   }
 
-  function createTextVnode(text) {
-    return vnode(undefined, undefined, undefined, undefined, text);
+  function createTextVnode(vm, text) {
+    return vnode(vm, undefined, undefined, undefined, undefined, text);
   }
 
-  function vnode(tag, data, key, children, text) {
+  function vnode(vm, tag, data, key, children, text, componentOptions) {
     return {
+      vm,
       tag,
       data,
       key,
       children,
-      text
+      text,
+      componentOptions
     };
   }
 

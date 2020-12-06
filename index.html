@@ -6,28 +6,16 @@
     <title>Document</title>
   </head>
   <body>
-    <div id="app">{{ arr }} <span style="color:blue;font-size:22px;" class="88">232</span></div>
+    <div id="app">
+      <el-button></el-button>
+      <el-button></el-button>
+      <el-button1></el-button1>
+    </div>
   </body>
   <script src="/dist/umd/vue.js"></script>
   <script>
-    Vue.mixin({
-      a: 1,
-      beforeCreate () {
-        console.log('beforeCreate1')
-      },
-      created () {
-        console.log('created1')
-      }
-    })
-    Vue.mixin({
-      a: 3,
-      b: 2,
-      beforeCreate () {
-        console.log('beforeCreate2')
-      },
-      created () {
-        console.log('created2')
-      }
+    Vue.component('el-button1', {
+      template: '<div>外面</div>'
     })
     const vm = new Vue({
       el: '#app',
@@ -36,12 +24,11 @@
           arr: [[1,3,4]]
         }
       },
-      beforeCreate () {
-        console.log('beforeCreate3')
+      components: {
+        'el-button': {
+          template: '<div>里面</div>'
+        }
       },
-      created () {
-        console.log('created3')
-      }
     })
 
   </script>

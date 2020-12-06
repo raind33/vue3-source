@@ -8,6 +8,7 @@ export function initMixin (Vue) {
     
     const vm = this
     vm.$options = mergeOptions(vm.constructor.options, opts)
+    console.log(vm.$options)
     callHook(vm, 'beforeCreate')
     initState(vm)
     callHook(vm, 'created')
@@ -31,6 +32,6 @@ export function initMixin (Vue) {
       opts.render = compileToFunction(template)
     }
 
-    mountComponent(vm, el)
+    mountComponent(vm)
   }
 }

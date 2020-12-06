@@ -1,12 +1,20 @@
-export function renderMixin (Vue) {
+import { isReservedTag, isObj } from '../util'
+
+export function renderMixin(Vue) {
   Vue.prototype._c = function () {
-    return createElement(...arguments)
+    const vm = this
+    return createElement(vm, ...arguments)
   }
   Vue.prototype._s = function (val) {
-    return val === null ? '' : (typeof val === 'object' ? JSON.stringify(val) : val)
+    return val === null
+      ? ''
+      : typeof val === 'object'
+      ? JSON.stringify(val)
+      : val
   }
   Vue.prototype._v = function (text) {
-    return createTextVnode(text)
+    const vm = this
+    return createTextVnode(vm, text)
   }
   Vue.prototype._render = function () {
     const vm = this
@@ -17,20 +25,50 @@ export function renderMixin (Vue) {
   }
 }
 
-function createElement (tag, data = {}, ...children) {
-  return vnode(tag, data, data.key, children)
+function createElement(vm, tag, data = {}, ...children) {
+  if (!isReservedTag(tag)) {
+    const Ctor = vm.$options.components[tag]
+    return createComponent(vm, tag, data, data.key, children, Ctor)
+  }
+
+  return vnode(vm, tag, data, data.key, children)
 }
 
-function createTextVnode (text) {
-  return vnode(undefined, undefined, undefined, undefined, text)
+// 创建组件vnode
+function createComponent(vm, tag, data, key, children, Ctor) {
+  if (isObj(Ctor)) {
+    Ctor = vm.$options._base.extend(Ctor)
+  }
+  // 给组件增加生命周期
+  data.hook = {
+    init(vnode) {
+      const child = vnode.componentInstance = new vnode.componentOptions.Ctor({})
+      child.$mount()
+    },
+  }
+  return vnode(
+    vm,
+    `vue-component-${Ctor.cid}-${tag}`,
+    data,
+    key,
+    undefined,
+    undefined,
+    { Ctor }
+  )
 }
 
-function vnode (tag, data, key, children, text) {
+function createTextVnode(vm, text) {
+  return vnode(vm, undefined, undefined, undefined, undefined, text)
+}
+
+function vnode(vm, tag, data, key, children, text, componentOptions) {
   return {
+    vm,
     tag,
     data,
     key,
     children,
-    text
+    text,
+    componentOptions,
   }
 }
