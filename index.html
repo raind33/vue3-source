@@ -7,29 +7,26 @@
   </head>
   <body>
     <div id="app">
-      <el-button></el-button>
-      <el-button></el-button>
-      <el-button1></el-button1>
     </div>
   </body>
   <script src="/dist/umd/vue.js"></script>
   <script>
-    Vue.component('el-button1', {
-      template: '<div>外面</div>'
-    })
-    const vm = new Vue({
-      el: '#app',
-      data() {
-        return {
-          arr: [[1,3,4]]
-        }
-      },
-      components: {
-        'el-button': {
-          template: '<div>里面</div>'
-        }
-      },
-    })
+    // Vue.component('el-button1', {
+    //   template: '<div>外面</div>'
+    // })
+    // const vm = new Vue({
+    //   el: '#app',
+    //   data() {
+    //     return {
+    //       arr: [[1,3,4]]
+    //     }
+    //   },
+    //   components: {
+    //     'el-button': {
+    //       template: '<div>里面</div>'
+    //     }
+    //   },
+    // })
 
   </script>
 </html>

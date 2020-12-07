@@ -1,5 +1,6 @@
 import babel from 'rollup-plugin-babel'
 import server from 'rollup-plugin-serve'
+import CommonJs from 'rollup-plugin-commonjs'
 
 export default {
   input: './src/index.js',
@@ -10,6 +11,7 @@ export default {
     sourcemap: true
   },
   plugins: [
+    CommonJs(),
     babel({
       exclude: 'node_modules/**'
     }),

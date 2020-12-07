@@ -4,160 +4,6 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 }(this, (function () { 'use strict';
 
-  function proxy(vm, data, key) {
-    Object.defineProperty(vm, key, {
-      get() {
-        return vm[data][key];
-      },
-
-      set(val) {
-        vm[data][key] = val;
-      }
-
-    });
-  }
-  function defineProperty(target, key, value) {
-    Object.defineProperty(target, key, {
-      enumerable: false,
-      configurable: false,
-      value
-    });
-  }
-  let callbacks = [];
-  let waiting = false;
-
-  function flushCallback() {
-    for (let i = 0; i < callbacks.length; i++) {
-      callbacks[i]();
-    }
-
-    waiting = false;
-  } // 1.第一次cb渲染watcher更新操作调用nextTick,页面初渲染
-  // 2. 第二次是用户主动调用nextTick的cb
-  // 3.所以当在页面中使用nextTick,页面渲染与nextTick的回调都是在宏任务结束后同步执行，渲染先
-
-
-  function nextTick(cb) {
-    callbacks.push(cb);
-
-    if (!waiting) {
-      waiting = true;
-      Promise.resolve().then(flushCallback); // 多次调用nextTick，只执行一次
-    }
-  }
-  const hooks = ['beforeCreate', 'created', 'beforeMount', 'mounted'];
-  const strat = {};
-  strat.components = mergeComponents;
-
-  function mergeComponents(parent, child) {
-    const res = Object.create(parent);
-
-    if (child) {
-      for (let key in child) {
-        res[key] = child[key];
-      }
-    }
-
-    return res;
-  }
-
-  hooks.forEach(hook => {
-    strat[hook] = mergeHook;
-  });
-
-  function mergeHook(parent, child) {
-    if (child) {
-      if (parent) {
-        return parent.concat(child);
-      } else {
-        return [child];
-      }
-    } else {
-      return parent;
-    }
-  }
-
-  function mergeOptions(parent, child) {
-    let options = {};
-
-    for (let key in parent) {
-      mergeField(key);
-    }
-
-    for (let key in child) {
-      if (!parent.hasOwnProperty(key)) {
-        mergeField(key);
-      }
-    }
-
-    return options;
-
-    function mergeField(key) {
-      if (strat[key]) {
-        options[key] = strat[key](parent[key], child[key]);
-        return;
-      }
-
-      if (isObj(parent[key]) && isObj(child[key])) {
-        options[key] = Object.assign(parent[key], child[key]);
-      } else {
-        if (child[key]) {
-          options[key] = child[key];
-        } else if (parent[key]) {
-          options[key] = parent[key];
-        }
-      }
-    }
-  }
-  function isObj(val) {
-    return typeof val === 'object' && typeof val !== 'null';
-  }
-
-  function makeup(str) {
-    const map = {};
-    str.split(',').forEach(tag => {
-      map[tag] = true;
-    });
-    return val => map[val] || false;
-  }
-
-  const isReservedTag = makeup('a,p,ul,li,ol,div,span,input,button');
-
-  function initGlobalApi(Vue) {
-    Vue.options = {};
-
-    Vue.mixin = function (options) {
-      this.options = mergeOptions(this.options, options);
-      console.log(this.options);
-    };
-
-    Vue.options.components = {};
-    Vue.options._base = Vue;
-
-    Vue.component = function (id, definition) {
-      definition.name = id || definition.name;
-      definition = this.options._base.extend(definition);
-      this.options.components[id] = definition;
-    };
-
-    let cid = 0;
-
-    Vue.extend = function (options) {
-      const Super = this;
-
-      const Sub = function VueComponent(options) {
-        this._init(options);
-      };
-
-      Sub.cid = cid++;
-      Sub.prototype = Object.create(Super.prototype);
-      Sub.prototype.constructor = Sub;
-      Sub.component = Super.component;
-      Sub.options = mergeOptions(Super.options, options);
-      return Sub;
-    };
-  }
-
   const defaultTagRe = /\{\{((?:.|\r?\n)+?)\}\}/g;
   function generate(ast) {
     // <div id="app" style="color:red"> hello {{name}} <span>232</span></div>
@@ -369,6 +215,232 @@
     return render;
   }
 
+  function proxy(vm, data, key) {
+    Object.defineProperty(vm, key, {
+      get() {
+        return vm[data][key];
+      },
+
+      set(val) {
+        vm[data][key] = val;
+      }
+
+    });
+  }
+  function defineProperty(target, key, value) {
+    Object.defineProperty(target, key, {
+      enumerable: false,
+      configurable: false,
+      value
+    });
+  }
+  let callbacks = [];
+  let waiting = false;
+
+  function flushCallback() {
+    for (let i = 0; i < callbacks.length; i++) {
+      callbacks[i]();
+    }
+
+    waiting = false;
+  } // 1.第一次cb渲染watcher更新操作调用nextTick,页面初渲染
+  // 2. 第二次是用户主动调用nextTick的cb
+  // 3.所以当在页面中使用nextTick,页面渲染与nextTick的回调都是在宏任务结束后同步执行，渲染先
+
+
+  function nextTick(cb) {
+    callbacks.push(cb);
+
+    if (!waiting) {
+      waiting = true;
+      Promise.resolve().then(flushCallback); // 多次调用nextTick，只执行一次
+    }
+  }
+  const hooks = ['beforeCreate', 'created', 'beforeMount', 'mounted'];
+  const strat = {};
+  strat.components = mergeComponents;
+
+  function mergeComponents(parent, child) {
+    const res = Object.create(parent);
+
+    if (child) {
+      for (let key in child) {
+        res[key] = child[key];
+      }
+    }
+
+    return res;
+  }
+
+  hooks.forEach(hook => {
+    strat[hook] = mergeHook;
+  });
+
+  function mergeHook(parent, child) {
+    if (child) {
+      if (parent) {
+        return parent.concat(child);
+      } else {
+        return [child];
+      }
+    } else {
+      return parent;
+    }
+  }
+
+  function mergeOptions(parent, child) {
+    let options = {};
+
+    for (let key in parent) {
+      mergeField(key);
+    }
+
+    for (let key in child) {
+      if (!parent.hasOwnProperty(key)) {
+        mergeField(key);
+      }
+    }
+
+    return options;
+
+    function mergeField(key) {
+      if (strat[key]) {
+        options[key] = strat[key](parent[key], child[key]);
+        return;
+      }
+
+      if (isObj(parent[key]) && isObj(child[key])) {
+        options[key] = Object.assign(parent[key], child[key]);
+      } else {
+        if (child[key]) {
+          options[key] = child[key];
+        } else if (parent[key]) {
+          options[key] = parent[key];
+        }
+      }
+    }
+  }
+  function isObj(val) {
+    return typeof val === 'object' && typeof val !== 'null';
+  }
+
+  function makeup(str) {
+    const map = {};
+    str.split(',').forEach(tag => {
+      map[tag] = true;
+    });
+    return val => map[val] || false;
+  }
+
+  const isReservedTag = makeup('a,p,ul,li,ol,div,span,input,button');
+
+  function initGlobalApi(Vue) {
+    Vue.options = {};
+
+    Vue.mixin = function (options) {
+      this.options = mergeOptions(this.options, options);
+      console.log(this.options);
+    };
+
+    Vue.options.components = {};
+    Vue.options._base = Vue;
+
+    Vue.component = function (id, definition) {
+      definition.name = id || definition.name;
+      definition = this.options._base.extend(definition);
+      this.options.components[id] = definition;
+    };
+
+    let cid = 0;
+
+    Vue.extend = function (options) {
+      const Super = this;
+
+      const Sub = function VueComponent(options) {
+        this._init(options);
+      };
+
+      Sub.cid = cid++;
+      Sub.prototype = Object.create(Super.prototype);
+      Sub.prototype.constructor = Sub;
+      Sub.component = Super.component;
+      Sub.options = mergeOptions(Super.options, options);
+      return Sub;
+    };
+  }
+
+  function renderMixin(Vue) {
+    Vue.prototype._c = function () {
+      const vm = this;
+      return createElement(vm, ...arguments);
+    };
+
+    Vue.prototype._s = function (val) {
+      return val === null ? '' : typeof val === 'object' ? JSON.stringify(val) : val;
+    };
+
+    Vue.prototype._v = function (text) {
+      const vm = this;
+      return createTextVnode(vm, text);
+    };
+
+    Vue.prototype._render = function () {
+      const vm = this;
+      const render = vm.$options.render;
+      const vnode = render.call(vm);
+      return vnode;
+    };
+  }
+
+  function createElement(vm, tag, data = {}, ...children) {
+    if (!isReservedTag(tag)) {
+      const Ctor = vm.$options.components[tag];
+      return createComponent(vm, tag, data, data.key, children, Ctor);
+    }
+
+    return vnode(vm, tag, data, data.key, children);
+  } // 创建组件vnode
+
+
+  function createComponent(vm, tag, data, key, children, Ctor) {
+    if (isObj(Ctor)) {
+      Ctor = vm.$options._base.extend(Ctor);
+    } // 给组件增加生命周期
+
+
+    data.hook = {
+      init(vnode) {
+        const child = vnode.componentInstance = new vnode.componentOptions.Ctor({});
+        child.$mount();
+      }
+
+    };
+    return vnode(vm, `vue-component-${Ctor.cid}-${tag}`, data, key, undefined, undefined, {
+      Ctor
+    });
+  }
+
+  function createTextVnode(vm, text) {
+    return vnode(vm, undefined, undefined, undefined, undefined, text);
+  }
+
+  function vnode(vm, tag, data, key, children, text, componentOptions) {
+    return {
+      vm,
+      tag,
+      data,
+      key,
+      children,
+      text,
+      componentOptions
+    };
+  }
+
+  function isSameNode(oldNode, newNode) {
+    if (oldNode.tag === newNode.tag && oldNode.key === newNode.key) return true;
+    return false;
+  }
+
   function patch(oldVnode, vnode) {
     if (!oldVnode) {
       return createEle(vnode);
@@ -382,6 +454,86 @@
       parentEl.insertBefore(el, oldVnode.nextSibling);
       parentEl.removeChild(oldVnode);
       return el;
+    } else {
+      // diff算法
+      //1.标签类型不同 直接删除老的
+      if (oldVnode.tag !== vnode.tag) {
+        oldVnode.el.parentNode.replaceChild(createEle(vnode), oldVnode.el);
+        return;
+      } // 2.文本类型
+
+
+      if (!oldVnode.tag) {
+        if (oldVnode.text !== vnode.text) {
+          oldVnode.el.textContent = vnode.text;
+          return oldVnode.el;
+        }
+      } // 3.元素类型相同,复用老节点，并且更新属性
+
+
+      let el = vnode.el = oldVnode.el;
+      patchProps(vnode, oldVnode.data || {}); // 4. 更新儿子
+      //  1. 老的有儿子新的也有儿子domdiff
+
+      let oldChildren = oldVnode.children || [];
+      let newChildren = vnode.children || [];
+
+      if (oldChildren.length > 0 && newChildren.length > 0) {
+        updateChildren(el, oldChildren, newChildren);
+      } else if (oldChildren.length > 0) {
+        //  2. 老的有儿子 新的没有儿子 =》删除老儿子
+        el.innerHTML = '';
+      } else {
+        //  3. 新的有儿子 老的的没有儿子 =》老节点上直接增加儿子
+        newChildren.forEach(child => el.appendChild(createEle(child)));
+      }
+    }
+  }
+
+  function updateChildren(parent, oldChildren, newChildren) {
+    // 双指针比较法
+    let oldStartIndex = 0; // 老的头索引
+
+    let oldEndIndex = oldChildren.length - 1; // 老的尾索引
+
+    let oldStartNode = oldChildren[0]; // 老的开始节点
+
+    let oldEndNode = oldChildren[oldEndIndex]; // 老的结束节点
+
+    let newStartIndex = 0; // 新的头索引
+
+    let newEndIndex = newChildren.length - 1; // 新的尾索引
+
+    let newStartNode = newChildren[0]; // 新的开始节点
+
+    let newEndNode = newChildren[newEndIndex]; // 新的结束节点
+
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+      if (isSameNode(oldStartNode, newStartNode)) {
+        //头比较
+        patch(oldStartNode, newStartNode);
+        oldStartNode = oldChildren[++oldStartIndex];
+        newStartNode = newChildren[++newStartIndex];
+      } else if (isSameNode(oldEndNode, newEndNode)) {
+        //尾比较
+        patch(oldEndNode, newEndNode);
+        oldEndNode = oldChildren[--oldEndIndex];
+        newEndNode = newChildren[--newEndIndex];
+      } else if (isSameNode(oldStartNode, newEndNode)) {
+        // 假设children刚好倒序
+        patch(oldStartNode, newEndNode);
+        parent.insertBefore(oldStartNode.el, oldEndNode.el.nextSibling);
+        oldStartNode = oldChildren[++oldStartIndex];
+        newEndNode = newChildren[--newEndIndex];
+      }
+    } // 新字节点有多余
+
+
+    if (newStartIndex <= newEndIndex) {
+      for (let i = newStartIndex; i <= newEndIndex; i++) {
+        let ele = !newChildren[newEndIndex + 1] ? null : newChildren[newEndIndex + 1].el;
+        parent.insertBefore(createEle(newChildren[i]), ele);
+      }
     }
   }
 
@@ -395,7 +547,7 @@
     } = vnode;
 
     if (typeof tag === 'string') {
-      if (createComponent(vnode)) {
+      if (createComponent$1(vnode)) {
         return vnode.componentInstance.$el;
       }
 
@@ -411,7 +563,7 @@
     return vnode.el;
   }
 
-  function createComponent(vnode) {
+  function createComponent$1(vnode) {
     const {
       data
     } = vnode;
@@ -428,9 +580,26 @@
     return false;
   }
 
-  function patchProps(vnode) {
+  function patchProps(vnode, oldProps = {}) {
     const newProps = vnode.data || {};
-    const el = vnode.el;
+    const el = vnode.el; //1. 老的属性有，新的没有，删除没有的
+
+    for (let key in oldProps) {
+      if (!newProps[key]) {
+        el.removeAttribute(key);
+      }
+    } // style特殊处理
+
+
+    let oldStyle = oldProps.style || {};
+    let newStyle = newProps.style || {};
+
+    for (let key in oldStyle) {
+      if (!newStyle[key]) {
+        el.style[key] = '';
+      }
+    } //2.老的属性没有，新的属性有，直接增加
+
 
     for (let key in newProps) {
       if (key === 'style') {
@@ -742,73 +911,6 @@
     };
   }
 
-  function renderMixin(Vue) {
-    Vue.prototype._c = function () {
-      const vm = this;
-      return createElement(vm, ...arguments);
-    };
-
-    Vue.prototype._s = function (val) {
-      return val === null ? '' : typeof val === 'object' ? JSON.stringify(val) : val;
-    };
-
-    Vue.prototype._v = function (text) {
-      const vm = this;
-      return createTextVnode(vm, text);
-    };
-
-    Vue.prototype._render = function () {
-      const vm = this;
-      const render = vm.$options.render;
-      const vnode = render.call(vm);
-      return vnode;
-    };
-  }
-
-  function createElement(vm, tag, data = {}, ...children) {
-    if (!isReservedTag(tag)) {
-      const Ctor = vm.$options.components[tag];
-      return createComponent$1(vm, tag, data, data.key, children, Ctor);
-    }
-
-    return vnode(vm, tag, data, data.key, children);
-  } // 创建组件vnode
-
-
-  function createComponent$1(vm, tag, data, key, children, Ctor) {
-    if (isObj(Ctor)) {
-      Ctor = vm.$options._base.extend(Ctor);
-    } // 给组件增加生命周期
-
-
-    data.hook = {
-      init(vnode) {
-        const child = vnode.componentInstance = new vnode.componentOptions.Ctor({});
-        child.$mount();
-      }
-
-    };
-    return vnode(vm, `vue-component-${Ctor.cid}-${tag}`, data, key, undefined, undefined, {
-      Ctor
-    });
-  }
-
-  function createTextVnode(vm, text) {
-    return vnode(vm, undefined, undefined, undefined, undefined, text);
-  }
-
-  function vnode(vm, tag, data, key, children, text, componentOptions) {
-    return {
-      vm,
-      tag,
-      data,
-      key,
-      children,
-      text,
-      componentOptions
-    };
-  }
-
   function Vue(options) {
     this._init(options);
   }
@@ -817,6 +919,39 @@
   renderMixin(Vue);
   lifecycleMixin(Vue);
   initGlobalApi(Vue);
+  let vm1 = new Vue({
+    data() {
+      return {
+        name: '232'
+      };
+    }
+
+  });
+  let render1 = compileToFunction(`<ul>
+  <li key="a">a</li>
+  <li key="b">b</li>
+  <li key="c">c</li>
+</ul>`);
+  let oldVnode = render1.call(vm1);
+  let el1 = createEle(oldVnode);
+  document.body.appendChild(el1);
+  let vm2 = new Vue({
+    data() {
+      return {
+        name: '232323322'
+      };
+    }
+
+  });
+  let render2 = compileToFunction(`<ul>
+<li key="c">c</li>
+<li key="b">b</li>
+<li key="a">a</li>
+</ul>`);
+  let newVnode = render2.call(vm2);
+  setTimeout(() => {
+    patch(oldVnode, newVnode);
+  }, 4000);
 
   return Vue;
 

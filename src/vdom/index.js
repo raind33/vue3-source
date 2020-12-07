@@ -72,3 +72,8 @@ function vnode(vm, tag, data, key, children, text, componentOptions) {
     componentOptions,
   }
 }
+
+export function isSameNode (oldNode, newNode) {
+  if (oldNode.tag === newNode.tag && oldNode.key === newNode.key) return true
+  return false
+}
