@@ -56,9 +56,21 @@ function updateChildren (parent, oldChildren, newChildren) {
   let newEndIndex = newChildren.length - 1 // 新的尾索引
   let newStartNode = newChildren[0] // 新的开始节点
   let newEndNode = newChildren[newEndIndex] // 新的结束节点
-
+  let keyToOldIndexMap = getKeyToOldIndexMap(oldChildren) // 旧子节点key与index的映射关系
+  function getKeyToOldIndexMap (children) {
+    let map = {}
+    for(let i = 0; i < children.length; i++) {
+      const child = children[i]
+      map[child.key] = i
+    }
+    return map
+  }
   while(oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-    if (isSameNode(oldStartNode, newStartNode)) { //头比较
+    if (!oldStartNode) {
+      oldStartNode = oldChildren[++oldStartIndex]
+    } else if (!oldEndNode) {
+      oldEndNode = oldChildren[--oldEndIndex]
+    } else if (isSameNode(oldStartNode, newStartNode)) { //头比较
       patch(oldStartNode, newStartNode)
       oldStartNode = oldChildren[++oldStartIndex]
       newStartNode = newChildren[++newStartIndex]
@@ -66,11 +78,28 @@ function updateChildren (parent, oldChildren, newChildren) {
       patch(oldEndNode, newEndNode)
       oldEndNode = oldChildren[--oldEndIndex]
       newEndNode = newChildren[--newEndIndex]
-    } else if (isSameNode(oldStartNode, newEndNode)) { // 假设children刚好倒序
+    } else if (isSameNode(oldStartNode, newEndNode)) { // 假设children刚好倒序，头尾比较
       patch(oldStartNode, newEndNode)
       parent.insertBefore(oldStartNode.el, oldEndNode.el.nextSibling)
       oldStartNode = oldChildren[++oldStartIndex]
       newEndNode = newChildren[--newEndIndex]
+    } else if (isSameNode(oldEndNode, newStartNode)) { //尾头比较
+      patch(oldEndNode, newStartNode)
+      parent.insertBefore(oldEndNode.el, oldStartNode.el)
+      oldEndNode = oldChildren[--oldEndIndex]
+      newStartNode = newChildren[++newStartIndex]
+    } else {  // 乱序比较 a b c d f
+      // n a c b e
+      const moveIndex = keyToOldIndexMap[newStartNode.key]
+      if (moveIndex === undefined) { // 如果新的在旧的没找到直接添加
+        parent.insertBefore(createEle(newStartNode), oldStartNode.el)
+      } else {
+        const moveNode = oldChildren[moveIndex]
+        oldChildren[moveIndex] = undefined
+        patch(moveNode, newStartNode)
+        parent.insertBefore(moveNode.el, oldStartNode.el)
+      }
+      newStartNode = newChildren[++newStartIndex]
     }
   }
   // 新字节点有多余
@@ -80,6 +109,15 @@ function updateChildren (parent, oldChildren, newChildren) {
       parent.insertBefore(createEle(newChildren[i]), ele)
     }
   }
+  // 旧子节点有多余
+  if(oldStartIndex <= oldEndIndex) {
+    for(let i = oldStartIndex; i <= oldEndIndex; i++) {
+      if (oldChildren[i] !== undefined) {
+        parent.removeChild(oldChildren[i].el)
+      }
+    }
+  }
+  
 }
 export function createEle (vnode) {
   let { tag, data, children, key, text } = vnode
