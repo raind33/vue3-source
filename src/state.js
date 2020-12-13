@@ -1,6 +1,7 @@
 import { observe } from './observer/index'
 import { proxy } from './util'
 import Watcher from './observer/watcher'
+import Dep from './observer/dep'
  
 export function initState (vm) {
   const opts = vm.$options
@@ -54,4 +55,39 @@ function createUserWatcher (vm, exprOrfn, handler, options = {}) {
   }
   vm.$watch(exprOrfn, handler, options)
 }
-function initComputed () {}
+function initComputed (vm) {
+  const computed = vm.$options.computed
+  if (computed) {
+    const watchers = vm._computedWatcher = {}
+    for(let key in computed) {
+      const userDef = computed[key]
+      const getter = typeof userDef === 'function' ? userDef : userDef.get
+      watchers[key] = new Watcher(vm, getter, undefined, { lazy: true})
+      defineComputed(vm, key, userDef)
+    }
+  }
+}
+
+const sharedPropertyDefinition = {}
+function defineComputed (vm, key, val) {
+  if (typeof val === 'function') {
+    sharedPropertyDefinition.get = createComputedGetter(key)
+  } else {
+    sharedPropertyDefinition.get = createComputedGetter(key)
+    sharedPropertyDefinition.set = val.set
+  }
+  Object.defineProperty(vm, key, sharedPropertyDefinition)
+}
+
+function createComputedGetter (key) {
+  return function () {
+    const watcher = this._computedWatcher[key]
+    if (watcher.dirty) {
+      watcher.execute()
+      if (Dep.target) {
+        watcher.depend()
+      }
+    }
+    return watcher.val
+  }
+}

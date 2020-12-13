@@ -7,7 +7,7 @@
   </head>
   <body>
     <div id="app">
-      <div>{{c}}</div>
+      {{name}}
     </div>
   </body>
   <script src="/dist/umd/vue.js"></script>
@@ -19,20 +19,21 @@
       el: '#app',
       data() {
         return {
-          obj: {a:{a:{a:2}}},
-          c:2
+          firstName: '李',
+          second: '山'
         }
       },
-      watch: {
-        'obj.a.a.a' (val, oldVal) {
-          console.log(val, oldVal)
-        },
+      computed: {
+        name () {
+          console.log('取值了')
+          return this.firstName + this.second
+        }
       }
     })
-    vm.obj.a.a.a = 8980
+    console.log(vm.name)
     setTimeout(() => {
-
-      vm.obj.a.a.a = 8980
+      vm.firstName = 'ewwe'
     }, 2000)
+    console.log(vm.name)
   </script>
 </html>

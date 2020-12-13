@@ -688,11 +688,14 @@
   }
 
   Dep.target = null;
+  const stack = [];
   function pushTarget(watcher) {
     Dep.target = watcher;
+    stack.push(watcher);
   }
   function popTarget() {
-    Dep.target = null;
+    stack.pop();
+    Dep.target = stack[stack.length - 1];
   }
 
   let queue = [];
@@ -731,6 +734,8 @@
       this.vm = vm;
       this.cb = cb;
       this.options = options;
+      this.lazy = options.lazy;
+      this.dirty = this.lazy;
       this.user = options.user;
 
       if (typeof exprOrFn === 'string') {
@@ -757,16 +762,28 @@
         this.cb();
       }
 
-      this.val = this.get();
+      this.val = this.lazy ? void 0 : this.get();
     } // 当属性取值时，需要记住这个watcher。数据再次变化，就去执行自己记住的这个watcher
 
 
     get() {
       // 这个方法会对属性进行取值
       pushTarget(this);
-      const val = this.getter();
+      const val = this.getter.call(this.vm);
       popTarget();
       return val;
+    }
+
+    execute() {
+      this.val = this.get();
+      this.dirty = false;
+    }
+
+    depend() {
+      const deps = this.deps;
+      deps.forEach(dep => {
+        dep.depend(); // 收集渲染watcher
+      });
     }
 
     addDep(dep) {
@@ -788,7 +805,12 @@
     }
 
     update() {
-      queueWatcher(this); // this.get()
+      if (this.lazy) {
+        this.dirty = true;
+      } else {
+        queueWatcher(this);
+      } // this.get()
+
     }
 
   }
@@ -948,7 +970,9 @@
       initWatch(vm);
     }
 
-    if (opts.computed) ;
+    if (opts.computed) {
+      initComputed(vm);
+    }
   }
 
   function initData(vm) {
@@ -990,6 +1014,52 @@
     }
 
     vm.$watch(exprOrfn, handler, options);
+  }
+
+  function initComputed(vm) {
+    const computed = vm.$options.computed;
+
+    if (computed) {
+      const watchers = vm._computedWatcher = {};
+
+      for (let key in computed) {
+        const userDef = computed[key];
+        const getter = typeof userDef === 'function' ? userDef : userDef.get;
+        watchers[key] = new Watcher(vm, getter, undefined, {
+          lazy: true
+        });
+        defineComputed(vm, key, userDef);
+      }
+    }
+  }
+
+  const sharedPropertyDefinition = {};
+
+  function defineComputed(vm, key, val) {
+    if (typeof val === 'function') {
+      sharedPropertyDefinition.get = createComputedGetter(key);
+    } else {
+      sharedPropertyDefinition.get = createComputedGetter(key);
+      sharedPropertyDefinition.set = val.set;
+    }
+
+    Object.defineProperty(vm, key, sharedPropertyDefinition);
+  }
+
+  function createComputedGetter(key) {
+    return function () {
+      const watcher = this._computedWatcher[key];
+
+      if (watcher.dirty) {
+        watcher.execute();
+
+        if (Dep.target) {
+          watcher.depend();
+        }
+      }
+
+      return watcher.val;
+    };
   }
 
   function initMixin(Vue) {

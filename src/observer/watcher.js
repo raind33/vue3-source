@@ -7,6 +7,8 @@ export default class Watcher {
     this.vm = vm
     this.cb = cb
     this.options = options
+    this.lazy = options.lazy
+    this.dirty = this.lazy
     this.user = options.user
     if (typeof exprOrFn === 'string') {
       this.getter = function () {
@@ -28,17 +30,26 @@ export default class Watcher {
     if (this.options.immediate) {
       this.cb()
     }
-    this.val = this.get()
+    this.val = this.lazy ? void 0 : this.get()
   }
 
   // 当属性取值时，需要记住这个watcher。数据再次变化，就去执行自己记住的这个watcher
   get () { // 这个方法会对属性进行取值
     pushTarget(this)
-    const val = this.getter()
+    const val = this.getter.call(this.vm)
     popTarget()
     return val
   }
-
+  execute () {
+    this.val = this.get()
+    this.dirty = false
+  }
+  depend () {
+    const deps = this.deps
+    deps.forEach(dep => {
+      dep.depend() // 收集渲染watcher
+    })
+  }
   addDep (dep) {
     if (!this.depsId.has(dep.id)) {
       this.depsId.add(dep.id)
@@ -55,7 +66,11 @@ export default class Watcher {
     }
   }
   update () {
-    queueWatcher(this)
+    if (this.lazy) {
+      this.dirty = true
+    } else {
+      queueWatcher(this)
+    }
     // this.get()
   }
 }
