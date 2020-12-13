@@ -727,23 +727,46 @@
 
   let id$1 = 0;
   class Watcher {
-    constructor(vm, exprOrFn, cb, renderWatcher) {
+    constructor(vm, exprOrFn, cb, options = {}) {
       this.vm = vm;
       this.cb = cb;
-      this.getter = exprOrFn;
-      this.options = vm.options;
+      this.options = options;
+      this.user = options.user;
+
+      if (typeof exprOrFn === 'string') {
+        this.getter = function () {
+          const path = exprOrFn.split('.');
+          let val = vm;
+
+          for (let i = 0; i < path.length; i++) {
+            const key = path[i];
+            val = val[key];
+          }
+
+          return val;
+        };
+      } else {
+        this.getter = exprOrFn;
+      }
+
       this.id = id$1++;
       this.deps = [];
       this.depsId = new Set();
-      this.get();
+
+      if (this.options.immediate) {
+        this.cb();
+      }
+
+      this.val = this.get();
     } // 当属性取值时，需要记住这个watcher。数据再次变化，就去执行自己记住的这个watcher
 
 
     get() {
       // 这个方法会对属性进行取值
       pushTarget(this);
-      this.getter();
+      const val = this.getter();
       popTarget();
+      return val;
     }
 
     addDep(dep) {
@@ -755,7 +778,13 @@
     }
 
     run() {
-      this.get();
+      let newVal = this.get();
+      let oldval = this.val;
+      this.val = newVal;
+
+      if (this.user) {
+        this.cb.call(this.vm, newVal, oldval);
+      }
     }
 
     update() {
@@ -915,7 +944,9 @@
 
     if (opts.methods) ;
 
-    if (opts.watch) ;
+    if (opts.watch) {
+      initWatch(vm);
+    }
 
     if (opts.computed) ;
   }
@@ -929,6 +960,36 @@
     }
 
     observe(data);
+  }
+
+  function initWatch(vm) {
+    const watch = vm.$options.watch;
+
+    for (let key in watch) {
+      let handler = watch[key];
+
+      if (Array.isArray(handler)) {
+        // 字符串、数组、对象、函数
+        val.forEach(handler => createUserWatcher(vm, key, handler));
+      }
+
+      {
+        createUserWatcher(vm, key, handler);
+      }
+    }
+  }
+
+  function createUserWatcher(vm, exprOrfn, handler, options = {}) {
+    if (typeof handler === 'object') {
+      options = handler;
+      handler = handler.handler;
+    }
+
+    if (typeof handler === 'string') {
+      handler = vm[handler];
+    }
+
+    vm.$watch(exprOrfn, handler, options);
   }
 
   function initMixin(Vue) {
@@ -946,6 +1007,12 @@
     };
 
     Vue.prototype.$nextTick = nextTick;
+
+    Vue.prototype.$watch = function (exOrFn, cb, options) {
+      const watcher = new Watcher(this, exOrFn, cb, { ...options,
+        user: true
+      });
+    };
 
     Vue.prototype.$mount = function (el) {
       const vm = this;
