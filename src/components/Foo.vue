@@ -1,6 +1,6 @@
 <template>
   <div @click="handle">
-    foo
+    {{$store.state.name}}
   </div>
 </template>
 
@@ -11,6 +11,12 @@
         alert(23)
       }
     },
+    asyncData (store) { // 只有页面级组件才有这个方法
+      return store.dispatch('changeName')
+    },
+    // mounted () {
+    //   this.$store.dispatch('changeName')
+    // }
   }
 </script>
 

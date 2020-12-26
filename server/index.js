@@ -15,8 +15,14 @@ const renderer = vueServerRenderer.createBundleRenderer(serverBundle, {
 })
 router.get('/(.*)', async (ctx) => {
   // 在渲染页面时 需要让服务器根据当前路径渲染对应的路由
- ctx.body = await renderer.renderToString({ url: ctx.url })
+  try {
+    ctx.body = await renderer.renderToString({ url: ctx.url })
+  } catch (e) {
+    if (e.code === 404) {
+      ctx.body = '页面未找到'
+    }
+  }
 })
-app.use(router.routes())
 app.use(static(path.resolve(__dirname, '../dist')))
+app.use(router.routes())
 app.listen(9000)
