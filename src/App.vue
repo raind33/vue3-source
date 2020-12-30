@@ -3,6 +3,8 @@
     <div id="nav">
       <router-link to="/">Home</router-link> |
       <router-link to="/about">About</router-link>
+      {{this.$store.state.a}}
+      <button @click="handleClick"></button>
     </div>
     <router-view />
   </div>
@@ -11,7 +13,12 @@
 export default {
   mounted () {
     console.log(this.$store)
-  }
+  },
+  methods: {
+    handleClick() {
+      this.$store.state.a = 99
+    }
+  },
 }
 </script>
 <style>
