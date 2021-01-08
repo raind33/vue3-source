@@ -3,8 +3,8 @@
     <div id="nav">
       <router-link to="/">Home</router-link> |
       <router-link to="/about">About</router-link>
-      {{this.$store.state.test.cc}}
-      {{this.$store.getters['test/ccc']}}
+      {{test.cc}}
+      {{this['test/ccc']}}
       <button @click="handleClick">mutation改变</button>
       <button @click="actionChange">action改变</button>
     </div>
@@ -12,9 +12,14 @@
   </div>
 </template>
 <script>
+import { mapState, mapGetters } from '../vuex'
 export default {
   mounted () {
     console.log(this.$store)
+  },
+  computed: {
+    ...mapState(['test']),
+    ...mapGetters(['test/ccc'])
   },
   methods: {
     handleClick() {
