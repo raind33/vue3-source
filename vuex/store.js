@@ -28,9 +28,6 @@ export  class Store {
   commit = (type, payload) => {
     this._mutations[type].forEach(fn => {
       fn(payload)
-      this._subsrcibes.forEach(sub => {
-        sub(fn, this._modules.root.state)
-      })
     })
     // this._mutations[type](payload)
   }
@@ -52,30 +49,40 @@ function installModules (store, rootState, path, module) {
       return memo[current]
     }, rootState)
     // parent[path[path.length - 1]] = module.state
+    // 响应化处理state
     Vue.set(parent, path[path.length - 1], module.state)
   }
   // 在没有命名空间情况下，所有的mutations与actions、getters都定义到根模块
   module.forEachMutations((mutation, type) => {
-    store._mutations[namespace+type] = (store._mutations[type]) || []
+    store._mutations[namespace+type] = (store._mutations[namespace + type]) || []
     store._mutations[namespace+type].push((payload) => {
-      mutation.call(store, module.state, payload)
+      mutation.call(store, getState(store, path), payload)
+      store._subsrcibes.forEach(sub => {
+        sub(mutation, store.state)
+      })
     })
   })
   module.forEachActions((action, type) => {
-    store._actions[namespace+type] = (store._actions[type]) || []
+    store._actions[namespace+type] = (store._actions[namespace + type]) || []
     store._actions[namespace+type].push((payload) => {
       action.call(store, store, payload)
     })
   })
   module.forEachGetters((getters, key) => {
     // 如果getters重名会覆盖
-    store._wrapperGetters[key] = function () {
-      return getters(module.state)
+    store._wrapperGetters[namespace+key] = function () {
+      return getters(getState(store, path))
     }
   })
   module.forEachChildren((child, key) => {
     installModules(store, rootState, path.concat(key), child)
   })
+}
+// 获取最新的状态，可以保证视图更新
+function getState (store, path) {
+  return path.reduce((state, cur) => {
+    return state[cur]
+  }, store.state)
 }
 function resetStoreVM (store, state) {
   const computed = {}

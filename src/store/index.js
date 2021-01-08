@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import Vuex from 'vuex'
+import Vuex from '../../vuex'
 import test from './modules/test'
 import { persist } from './plugins/persist'
 Vue.use(Vuex)

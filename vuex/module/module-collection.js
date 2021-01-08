@@ -27,7 +27,7 @@ class ModuleCollection {
     let module = this.root
     return path.reduce((str, key) => {
       module = module.getChild(key)
-      return str + (module._raw.namespaced ? key+'/' : '')
+      return str + (module.namespaced ? key+'/' : '')
     }, '')
   }
 }

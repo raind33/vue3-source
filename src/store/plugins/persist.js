@@ -6,7 +6,6 @@ export function persist () {
       store.replaceState(JSON.parse(data))
     }
     store.subscribe((mutation, state) => {
-      debugger
       localStorage.setItem('vuex:data', JSON.stringify(state))
       console.log(mutation, state)
     })

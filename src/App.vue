@@ -4,6 +4,7 @@
       <router-link to="/">Home</router-link> |
       <router-link to="/about">About</router-link>
       {{this.$store.state.test.cc}}
+      {{this.$store.getters['test/ccc']}}
       <button @click="handleClick">mutation改变</button>
       <button @click="actionChange">action改变</button>
     </div>
