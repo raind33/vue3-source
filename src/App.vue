@@ -3,10 +3,9 @@
     <div id="nav">
       <router-link to="/">Home</router-link> |
       <router-link to="/about">About</router-link>
-      {{this.$store.state.b.cc}}
-      {{this.$store.b}}
-      {{this.$store.getters.c}}
-      <button @click="handleClick"></button>
+      {{this.$store.state.test.cc}}
+      <button @click="handleClick">mutation改变</button>
+      <button @click="actionChange">action改变</button>
     </div>
     <router-view />
   </div>
@@ -18,7 +17,10 @@ export default {
   },
   methods: {
     handleClick() {
-      this.$store.commit('changeA', 1000)
+      this.$store.commit('test/changeC', 1000)
+    },
+    actionChange () {
+      this.$store.dispatch('changeA', 2000)
     }
   },
 }

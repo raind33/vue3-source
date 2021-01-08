@@ -23,6 +23,13 @@ class ModuleCollection {
       })
     }
   }
+  getNameSpace (path) {
+    let module = this.root
+    return path.reduce((str, key) => {
+      module = module.getChild(key)
+      return str + (module._raw.namespaced ? key+'/' : '')
+    }, '')
+  }
 }
 
 export default ModuleCollection

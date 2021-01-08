@@ -1,28 +1,13 @@
 import Vue from 'vue'
-import Vuex from '../../vuex'
-
+import Vuex from 'vuex'
+import test from './modules/test'
+import { persist } from './plugins/persist'
 Vue.use(Vuex)
 
 export default new Vuex.Store({
-  modules: {
-    b: {
-      state: {
-        cc: 323
-      },
-      modules: {
-        c: {
-          state: {
-            fd: 322
-          },
-          mutations: {
-            changeB () {
-
-            }
-          }
-        }
-      }
-    }
-  },
+  plugins: [
+    persist()
+  ],
   state: {
     a: 2323
   },
@@ -36,5 +21,17 @@ export default new Vuex.Store({
       state.a = val
     }
   },
-  actions: {},
+  actions: {
+    changeA ({ commit }, val) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          commit('changeA', val)
+          resolve()
+        }, 1000)
+      })
+    }
+  },
+  modules: {
+    test
+  }
 })

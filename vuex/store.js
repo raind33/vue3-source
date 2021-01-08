@@ -6,47 +6,31 @@ export  class Store {
   constructor (options) {
     
     const state = options.state
+    const plugins = options.plugins
     this._modules = new ModuleCollection(options)
     this._wrapperGetters = {}
     this._actions = {}
     this._mutations = {}
+    this._subsrcibes = []
     installModules(this, state, [], this._modules.root)
+    console.log(state, this._actions, this._mutations)
     resetStoreVM(this, state)
-    console.log(JSON.stringify(state), this._actions, this._mutations)
-    // 利用computed属性做缓存，当改变与getter计算属性无关的属性，不再触发gettter中的函数
-    // const computed = {}
-    // forEach(getters, (fn, key) => {
-    //   computed[key] = () => {
-    //     return fn(this.state)
-    //   }
-    //   Object.defineProperty(this.getters, key, {
-    //     get: () => {
-    //       return this._vm[key]
-    //     }
-    //   })
-    // })
-    // // this.state = state
-    // this._vm = new Vue({
-    //   data () {
-    //     return {
-    //       $$state: state
-    //     }
-    //   },
-    //   computed
-    // })
-    // this._mutations = {}
-    // forEach(options.mutations, (fn, key) => {
-    //   this._mutations[key] = (payload) => fn.call(this, this.state, payload)
-    // })
-
-    // this._actions = {}
-    // forEach(options.actions, (fn, key) => {
-    //   this._actions[key] = (payload) => fn.call(this, this, payload)
-    // })
+    plugins.forEach(fn => {
+      fn(this)
+    })
+  }
+  subscribe (fn) {
+    this._subsrcibes.push(fn)
+  }
+  replaceState (state) {
+    this._vm._data.$$state = state
   }
   commit = (type, payload) => {
     this._mutations[type].forEach(fn => {
       fn(payload)
+      this._subsrcibes.forEach(sub => {
+        sub(fn, this._modules.root.state)
+      })
     })
     // this._mutations[type](payload)
   }
@@ -60,6 +44,8 @@ export  class Store {
   }
 }
 function installModules (store, rootState, path, module) {
+  const namespace = store._modules.getNameSpace(path)
+  console.log(namespace)
   // 将所有子模块的状态安装到父模块上
   if (path.length > 0) {
     const parent = path.slice(0, -1).reduce((memo, current) => {
@@ -70,14 +56,14 @@ function installModules (store, rootState, path, module) {
   }
   // 在没有命名空间情况下，所有的mutations与actions、getters都定义到根模块
   module.forEachMutations((mutation, type) => {
-    store._mutations[type] = (store._mutations[type]) || []
-    store._mutations[type].push((payload) => {
+    store._mutations[namespace+type] = (store._mutations[type]) || []
+    store._mutations[namespace+type].push((payload) => {
       mutation.call(store, module.state, payload)
     })
   })
   module.forEachActions((action, type) => {
-    store._actions[type] = (store._actions[type]) || []
-    store._actions[type].push((payload) => {
+    store._actions[namespace+type] = (store._actions[type]) || []
+    store._actions[namespace+type].push((payload) => {
       action.call(store, store, payload)
     })
   })
