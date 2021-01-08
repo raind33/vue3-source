@@ -1,6 +1,6 @@
 import { applyMixin } from "./mixin"
 import ModuleCollection from "./module/module-collection"
-// import { forEach } from "./utils"
+import { forEach } from "./utils"
 export let Vue
 export  class Store {
   constructor (options) {
@@ -45,11 +45,15 @@ export  class Store {
     // })
   }
   commit = (type, payload) => {
-    debugger
-    this._mutations[type](payload)
+    this._mutations[type].forEach(fn => {
+      fn(payload)
+    })
+    // this._mutations[type](payload)
   }
   dispatch = (type, payload) => {
-    this._actions[type](payload)
+    this._actions[type].forEach(fn => {
+      fn(payload)
+    })
   }
   get state () {
     return this._vm._data.$$state
@@ -88,6 +92,26 @@ function installModules (store, rootState, path, module) {
   })
 }
 function resetStoreVM (store, state) {
+  const computed = {}
+  store.getters = {}
+  forEach(store._wrapperGetters, (fn, key) => {
+    computed[key] = () => {
+      return fn()
+    }
+    Object.defineProperty(store.getters, key, {
+      get: () => {
+        return store._vm[key]
+      }
+    })
+  })
+  store._vm = new Vue({
+    data () {
+      return { 
+        $$state: state
+      }
+    },
+    computed
+  })
   console.log(store, state)
 }
 export const install = (_vue) => {

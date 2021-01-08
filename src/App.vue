@@ -3,9 +3,9 @@
     <div id="nav">
       <router-link to="/">Home</router-link> |
       <router-link to="/about">About</router-link>
-      <!-- {{this.$store.state.a}}
+      {{this.$store.state.b.cc}}
       {{this.$store.b}}
-      {{this.$store.getters.c}} -->
+      {{this.$store.getters.c}}
       <button @click="handleClick"></button>
     </div>
     <router-view />
